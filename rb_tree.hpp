@@ -1,3 +1,6 @@
+#ifndef _RB_TREE_HPP_
+#define _RB_TREE_HPP_
+
 #include <iostream>
 #include <chrono>
 #include <map>
@@ -141,11 +144,12 @@ class LessComparator {
 
 template<typename T>
 class Hash {
-    SET_USING_CLASS(size_t, r_type);
     SET_USING_CLASS(T, type);
+    SET_USING_CLASS(size_t, hash_result);
+    
     public:
     
-    r_type operator()(const T& v) const {
+    hash_result operator()(const T& v) const {
         return v;
     }
 };
@@ -153,11 +157,11 @@ class Hash {
 template<typename T, typename U>
 class Hash<std::pair<T,U>> {
     using pair = std::pair<T,U>;
-    SET_USING_CLASS(size_t, r_type);
     SET_USING_CLASS(pair, type);
+    SET_USING_CLASS(size_t, hash_result);
     public:
 
-    r_type operator()(type_const_reference v) const {
+    hash_result operator()(type_const_reference v) const {
         return v.first;
     }
 };
@@ -210,10 +214,14 @@ class RedBlackTree {
     EXTRACT_SUB_USING_T_CLASS(node, type, type);
     using _hs = Hash<type>;
     SET_USING_CLASS(_hs, hsh);
+    EXTRACT_SUB_USING_T_CLASS(hsh, type, hashed);
+    EXTRACT_SUB_USING_T_CLASS(hsh, hash_result, hash_result);
+    
+    using _cmp = Cmp<hash_result>;
+    SET_USING_CLASS(_cmp, comparator);
+    
     using _alloc = Alloc<node>;
     SET_USING_CLASS(_alloc, allocator);
-    using _cmp = Cmp<typename hsh::r_type>;
-    SET_USING_CLASS(_cmp, comparator);
     
     template<bool reverse, bool cnst = false>
     class MapIterator {
@@ -860,130 +868,4 @@ class RedBlackTree {
 
 };
 
-template<typename Key, typename Value, template <typename> class Allocator>
-class Map : RedBlackTree<std::pair<Key,Value>, Hash, LessComparator, Allocator> {
-    SET_USING_CLASS(Key, key);
-    SET_USING_CLASS(Value, value);
-    using PR = std::pair<key, value>;
-    SET_USING_CLASS(PR, pair);
-    using rb_tree = RedBlackTree<std::pair<Key,Value>, Hash, LessComparator, Allocator>;
-    EXTRACT_SUB_USING_T_CLASS(rb_tree, node, node);
-    EXTRACT_SUB_USING_T_CLASS(rb_tree, const_iterator, iterator);
-    EXTRACT_SUB_USING_T_CLASS(rb_tree, const_reverse_iterator, reverse_iterator);
-
-public:
-
-    Map() = default;
-    ~Map() = default;
-    
-    using rb_tree::empty;
-    using rb_tree::size;
-    using rb_tree::max_size;
-
-    bool contains(key_const_reference k) const {
-        pair p = {k, {}};
-        return rb_tree::contains(p);
-    }
-
-    pair_reference insert(key_const_reference k, value_const_reference v) {
-        pair p = {k, v};
-        if(!rb_tree::contains(p)) {
-            rb_tree::insert(p);
-        }
-
-        node_ptr n = rb_tree::get_node(p);
-        return n->get_data();
-    }
-
-    void remove(key_const_reference k) {
-        pair p = {k,{}};
-        if(rb_tree::contains(p)) {
-            node_ptr n = rb_tree::get_node(p);
-            rb_tree::remove(n);
-        }
-    }
-
-    void erase(iterator_const_reference it) {
-        if(!is_tree_iterator(it)) 
-            return;
-        if(it == end())
-            return;
-        
-        node_ptr n = rb_tree::get_node(*it);
-        rb_tree::remove(n);
-    }
-
-    value_reference operator[](key_const_reference k) {
-        pair p = {k, {}};
-        if (!rb_tree::contains(p)) {
-            rb_tree::insert(p);   
-        }
-        node_ptr n = rb_tree::get_node(p);
-        return n->get_data().second;
-    }
-
-    iterator lower_bound(key_const_reference k) const {
-        pair p {k, {}};
-        return rb_tree:: template build_iterator<iterator>(rb_tree::equal_or_greater(p));
-    }
-
-    iterator upper_bound(key_const_reference k) const {
-        typename rb_tree::comparator_const c;
-        typename rb_tree::hsh_const h;
-
-        pair p {k, {}};
-        node_const_ptr n = rb_tree::equal_or_greater(p);
-        
-        if(n == rb_tree::t_null() || c(h(n->get_data()), h(p)))
-            return rb_tree:: template build_iterator<iterator>(n);
-
-        return rb_tree:: template build_iterator<iterator>(rb_tree::get_in_order_successor(n));
-    }
-
-    value_const_reference at(key_const_reference k) const {
-        if(contains(k)) {
-            pair p {k, {}};
-            node_const_ptr n = rb_tree::get_node(p);
-        }
-    }
-
-    iterator begin() const {
-        return rb_tree::begin();
-    }
-
-    iterator end() const {
-        return rb_tree::end();
-    }
-
-    reverse_iterator rbegin() const {
-        return rb_tree::rbegin();
-    }
-
-    reverse_iterator rend() const {
-        return rb_tree::rend();
-    }
-};
-
-int main() {
-    Map<int, int, Allocator> m;
-
-    for(size_t i = 0; i < 100; ++i) {
-        m.insert(i,i);
-    }
-
-
-    auto it = m.lower_bound(20);
-    auto it2 = m.upper_bound(20);
-
-    std::cout << it->first << " " << it->second << "\r\n";
-    std::cout << it2->first << " " << it2->second << "\r\n";
-
-
-
-
-
-  //for(auto n = V.get_in_order_successor(nullptr); n != nullptr; n = V.get_in_order_successor(n)) {
-  //  std::cout << n->get_data() << "\r\n";
-  //}
-
-};
+#endif
