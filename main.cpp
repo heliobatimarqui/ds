@@ -1,8 +1,14 @@
-#include "rb_tree.hpp"
+#include <iostream>
 #include "map.hpp"
 
 int main() {
     Map<int, int, Allocator> m;
 
-    m.insert(10,10);
+    for(size_t i = 0; i < 100; ++i) {
+        m.insert(i,i);
+    }
+
+    for(auto& a : m) {
+        std::cout << a.first << " " << a.second << "\r\n";
+    }
 }

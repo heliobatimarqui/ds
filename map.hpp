@@ -3,13 +3,35 @@
 
 #include "rb_tree.hpp"
 
+template<typename P>
+class MapHash {
+    using T = P::first_type;
+    using U = P::second_type;
+    using pair = std::pair<T, U>;
+    SET_USING_CLASS(pair, type);
+    SET_USING_CLASS(size_t, hash_result);
+
+    Hash<T> m_h;
+public:
+
+    size_t operator()(type_const_reference v) const {
+        return m_h(v.first);
+    }
+
+    const Hash<T>& get_T_hasher() {
+        return m_h;
+    }
+
+};
+
+
 template<typename Key, typename Value, template <typename> class Allocator>
-class Map : RedBlackTree<std::pair<Key,Value>, Hash, LessComparator, Allocator> {
+class Map : RedBlackTree<std::pair<Key,Value>, MapHash, LessComparator, Allocator> {
     SET_USING_CLASS(Key, key);
     SET_USING_CLASS(Value, value);
     using PR = std::pair<key, value>;
     SET_USING_CLASS(PR, pair);
-    using rb_tree = RedBlackTree<std::pair<Key,Value>, Hash, LessComparator, Allocator>;
+    using rb_tree = RedBlackTree<std::pair<Key,Value>, MapHash, LessComparator, Allocator>;
     EXTRACT_SUB_USING_T_CLASS(rb_tree, node, node);
     EXTRACT_SUB_USING_T_CLASS(rb_tree, const_iterator, iterator);
     EXTRACT_SUB_USING_T_CLASS(rb_tree, const_reverse_iterator, reverse_iterator);
@@ -24,24 +46,25 @@ public:
     using rb_tree::max_size;
 
     bool contains(key_const_reference k) const {
-        pair p = {k, {}};
-        return rb_tree::contains(p);
+        auto& h = rb_tree::get_hasher().get_T_hasher();
+        return rb_tree::contains(h(k));
     }
 
+    // TODO: make template of it, so we can capture rvalues
     pair_reference insert(key_const_reference k, value_const_reference v) {
-        pair p = {k, v};
-        if(!rb_tree::contains(p)) {
-            rb_tree::insert(p);
+        auto& h = rb_tree::get_hasher().get_T_hasher();
+        if(rb_tree::contains(h(k))) {
+            return rb_tree::get_node(h(k))->get_data();
         }
 
-        node_ptr n = rb_tree::get_node(p);
-        return n->get_data();
+        pair p = {k, v};
+        return rb_tree::insert(p)->get_data();
     }
 
     void remove(key_const_reference k) {
-        pair p = {k,{}};
-        if(rb_tree::contains(p)) {
-            node_ptr n = rb_tree::get_node(p);
+        auto& h = rb_tree::get_hasher().get_T_hasher();
+        node_ptr n = rb_tree::get_node(h(k));
+        if(n != rb_tree::t_null()) {
             rb_tree::remove(n);
         }
     }
@@ -57,37 +80,42 @@ public:
     }
 
     value_reference operator[](key_const_reference k) {
-        pair p = {k, {}};
-        if (!rb_tree::contains(p)) {
+        auto& h = rb_tree::get_hasher().get_T_hasher();
+        if (!rb_tree::contains(h(k))) {
+            pair p = {k, {}};
             rb_tree::insert(p);   
         }
-        node_ptr n = rb_tree::get_node(p);
+        node_ptr n = rb_tree::get_node(h(k));
         return n->get_data().second;
     }
 
     iterator lower_bound(key_const_reference k) const {
-        pair p {k, {}};
-        return rb_tree:: template build_iterator<iterator>(rb_tree::equal_or_greater(p));
+        auto& h = rb_tree::get_hasher().get_T_hasher();
+        return rb_tree:: template build_iterator<iterator>(rb_tree::equal_or_greater(h(k)));
     }
 
     iterator upper_bound(key_const_reference k) const {
-        typename rb_tree::comparator_const c;
-        typename rb_tree::hsh_const h;
+        auto& h_pair = rb_tree::get_hasher();
+        auto& h = rb_tree::get_hasher().get_T_hasher();
+        auto& c = rb_tree::comparator();
 
-        pair p {k, {}};
-        node_const_ptr n = rb_tree::equal_or_greater(p);
+        node_const_ptr n = rb_tree::equal_or_greater(h(k));
         
-        if(n == rb_tree::t_null() || c(h(n->get_data()), h(p)))
+        if(n == rb_tree::t_null() || c(h_pair(n->get_data()), h(k)))
             return rb_tree:: template build_iterator<iterator>(n);
 
         return rb_tree:: template build_iterator<iterator>(rb_tree::get_in_order_successor(n));
     }
 
     value_const_reference at(key_const_reference k) const {
-        if(contains(k)) {
-            pair p {k, {}};
-            node_const_ptr n = rb_tree::get_node(p);
+        auto& h = rb_tree::get_hasher().get_T_hasher();
+        node_const_ptr n = rb_tree::get_node(h(k));
+        
+        if(n == rb_tree::t_null()) {
+            // FAIL MISERABLY
         }
+        return n->get_data().second;
+        
     }
 
     iterator begin() const {
