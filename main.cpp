@@ -1,14 +1,17 @@
 #include <iostream>
-#include "map.hpp"
+#include "allocator.hpp"
+#include "double_list.hpp"
 
 int main() {
-    Map<int, int, Allocator> m;
+    DoubleList<int, Allocator> l;
 
     for(size_t i = 0; i < 100; ++i) {
-        m.insert(i,i);
+        l.push_back(i);
     }
 
-    for(auto& a : m) {
-        std::cout << a.first << " " << a.second << "\r\n";
+    //l.insert(l.end(), 101);
+
+    for(auto& a : l) {
+        std::cout << a << "\r\n";
     }
 }

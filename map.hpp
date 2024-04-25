@@ -50,15 +50,15 @@ public:
         return rb_tree::contains(h(k));
     }
 
-    // TODO: make template of it, so we can capture rvalues
-    pair_reference insert(key_const_reference k, value_const_reference v) {
+    // TODO: make template of it, so we can pass rvalues
+    iterator insert(key_const_reference k, value_const_reference v) {
         auto& h = rb_tree::get_hasher().get_T_hasher();
         if(rb_tree::contains(h(k))) {
-            return rb_tree::get_node(h(k))->get_data();
+            return rb_tree::build_iterator(rb_tree::get_node(h(k)));
         }
 
         pair p = {k, v};
-        return rb_tree::insert(p)->get_data();
+        return rb_tree::build_iterator(rb_tree::insert(p));
     }
 
     void remove(key_const_reference k) {

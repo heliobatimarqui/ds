@@ -599,6 +599,9 @@ class RedBlackTree {
     }
 
     node_ptr insert(type_const_reference key) {
+        if(size() == max_size())
+            return t_null();
+        
         auto& c = get_comparator();
         auto& h = get_hasher();
 
