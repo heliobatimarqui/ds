@@ -309,8 +309,8 @@ class RedBlackTree {
                     n->set_color(Color::BLACK);
                     p->set_color(Color::RED);
                     gp->set_color(Color::RED);
-                    rotate_right(n);
-                    rotate_left(p);
+                    rotate_right(p);
+                    rotate_left(gp);
                 }
             } else if(is_left_child(p)) {
                 if(is_left_child(n)){
@@ -321,8 +321,8 @@ class RedBlackTree {
                     n->set_color(Color::BLACK);
                     p->set_color(Color::RED);
                     gp->set_color(Color::RED);
-                    rotate_left(n);
-                    rotate_right(p);
+                    rotate_left(p);
+                    rotate_right(gp);
                 }
             }
         }        
